@@ -1,5 +1,3 @@
-# CREDIT: https://github.com/Abdul-Mukit/dope_exp/blob/master/demo/live_dope_webcam.py
-
 import numpy as np
 import queue, yaml, threading, time, cv2, math
 from cuboid import *
