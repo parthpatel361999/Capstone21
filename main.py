@@ -3,6 +3,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 import cleaningObj
 import imutils
 import yaml
+import pickle
+import PIL
+from tkinter import *
 from cleaningObj import *
 from cuboid import *
 from cuboid_pnp_solver import *
@@ -10,6 +13,7 @@ from detector import *
 from handModel.handDetector import *
 from imutils.video import WebcamVideoStream
 from imutils.video import FPS
+from PIL import ImageTk
 
 # Constants
 [memSize_X, memSize_Y] = [500, 500]
@@ -76,6 +80,38 @@ with open(yaml_path, 'r') as stream:
             )
         dimensions[model] = tuple(params['dimensions'][model])
         mainObjects[model] = cleaningObj.CleaningObject(objId1=1, vertices1=np.zeros(8), quarternion1=0, color1=params['draw_colors'][model], dimensions=dimensions[model])
+
+global modelSym
+#INTERFACE INITALIZER
+root = Tk()
+root.geometry('750x540')
+root.title("PROJECT TITLE")
+root.bind('<Escape>', lambda e: root.quit())
+def sclick():
+    global modelSym
+    filename = input("Enter file name")
+    savefile = open(filename, 'wb')
+    pickle.dump(mainObjects[modelSym], savefile)
+    #print(lol.rightFace)
+
+def lclick():
+    global modelSym
+    filename2 = input("Enter file name")
+    readfile = open(filename2, 'rb')
+    loadobject = pickle.load(readfile)
+    mainObjects[modelSym] = cleaningObj.CleaningObject(objId1=1, vertices1=np.zeros(8), quarternion1=0, color1=params['draw_colors'][model], dimensions=dimensions[model])
+    mainObjects[modelSym].loadClean(loadobject)
+    #print(loadobject.rightFace)
+
+
+lmain = Label(root,height=480, width=640)
+sbutton = Button(root, text="SAVE", height=2, width=5, command=sclick)
+sbutton.grid(column=1, row=0)
+lbutton = Button(root, text="LOAD", height=2, width=5, command=lclick)
+lbutton.grid(column=0, row=0)
+lmain.grid(column=2, row=1)
+
+#Other control variables
 detectHand_net = HandDetector()
 cap = WebcamVideoStream(src=0).start()
 frameCtrl = FPS().start()
@@ -83,21 +119,38 @@ isHandDetected = False
 initialRun = True
 frameCount = 0
 frameThres = 10
-while True:
+handCount = 0
+handThres = 10
+handTemp = None
+modelSym = 'cracker'
+results = None
+
+def show_frame():
+    global detectHand_net, cap, frameCtrl, isHandDetected, initialRun, frameCount, frameThres, handCount, handThres, handTemp, modelSym, models, pnp_solvers,pub_dimension, draw_colors, dimensions, mainObjects, handCoords, results
+    #print(models)
     frame = cap.read()
     frameDOPE = frame.copy()
     frameDOPE = cv2.cvtColor(frameDOPE, cv2.COLOR_BGR2RGB)
     frameHand = frame.copy()
     cleaningMask = np.zeros((frame.shape[0], frame.shape[1], 3), np.uint8)
     if frameCount % frameThres == 0:
-        handCoords = detectHand_net.detectHand(frameHand)
+        #handCoords = detectHand_net.detectHand(frameHand)
+        handTemp = detectHand_net.detectHand(frameHand)
+    if handTemp is None:
+        handCount += 1
+        if handCount > handThres:
+            handCoords = None
+    else:
+        handCount = 0
+        handCoords = handTemp.copy()
     for m in models:
+        modelSym = m
         if initialRun:
             results = ObjectDetector.detect_object_in_image(models[m].net, pnp_solvers[m], frameDOPE, config_detect)
             handCoords = None
             initialRun = False
         else:
-            if handCoords is None and (frameCount % frameThres == 0):
+            if (handCoords is None and handCount > handThres) and (frameCount % frameThres == 0):
                 results = ObjectDetector.detect_object_in_image(models[m].net, pnp_solvers[m], frameDOPE, config_detect)
         for i_r, result in enumerate(results):
             if result["location"] is None:
@@ -114,18 +167,22 @@ while True:
                 cleaningMask = cleaningObj.drawCompleteMask(points2d, mainObjects[m], ori, score, handCoords, frame)
             else:
                 print("NOTHING")
-    #img = cv2.cvtColor(frameDOPE, cv2.COLOR_RGB2BGR)
+    #frame = cv2.cvtColor(frameDOPE, cv2.COLOR_RGB2BGR)
     img = cv2.add(frame, cleaningMask)
     if handCoords is not None and len(handCoords) >= 4:
         cv2.rectangle(img, (handCoords[0],handCoords[1]),(handCoords[2],handCoords[3]),[0,0,255],3)
-    cv2.imshow('Cleaning Output', img)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = PIL.Image.fromarray(img)
+    imgtk = ImageTk.PhotoImage(image=img)
+    lmain.imgtk = imgtk
+    lmain.configure(image=imgtk)
+    lmain.after(10, show_frame)
     frameCtrl.update()
     if frameCount % frameThres == 0:
         frameCount = 0
     frameCount+=1
+show_frame()
+root.mainloop()
 frameCtrl.stop()
 cap.stop()
 cv2.destroyAllWindows()
-

@@ -45,6 +45,15 @@ class CleaningObject:
         self.leftPoints = [vertices1[4], vertices1[0], vertices1[3], vertices1[7]]
         self.rightPoints = [vertices1[2], vertices1[1], vertices1[5], vertices1[6]]
 
+    def loadClean(self, copyObj):
+        self.frontFace = copyObj.frontFace
+        self.backFace = copyObj.backFace
+        self.topFace = copyObj.topFace
+        self.bottomFace = copyObj.bottomFace
+        self.leftFace = copyObj.leftFace
+        self.rightFace = copyObj.rightFace
+        self.acceptableRatio = copyObj.acceptableRatio
+
     def updateExposed(self, quat1):
         rotationQ = Rotation.from_quat([quat1[0], quat1[1], quat1[2], quat1[3]])  # (X,Y,Z,W)
 

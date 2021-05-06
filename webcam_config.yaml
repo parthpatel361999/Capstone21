@@ -2,7 +2,7 @@
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
-    #"mug":"mug_10.pth",
+    #"mug":"mug.pth",
     "cracker":"cracker_60.pth",
     # "gelatin":"gelatin_60.pth",
     # "meat":"meat_20.pth",
@@ -27,7 +27,8 @@ dimensions: {
 
 draw_colors: {
     "mug": [0,255,0],
-    "cracker": [13, 255, 128],  # green
+    "cracker": [255, 51, 51],  # blue
+    #"cracker": [13, 255, 128],  # green
     "meat": [0, 104, 255],  # blue
     "mustard": [217,12, 232],  # magenta
     "soup": [255, 101, 0],  # orange
